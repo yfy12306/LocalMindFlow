@@ -1,0 +1,10 @@
+﻿node_modules/
+__pycache__/
+*.pyc
+chat.db
+frontend/dist/
+frontend/node_modules/
+.env
+*.log
+.vscode/
+.idea/

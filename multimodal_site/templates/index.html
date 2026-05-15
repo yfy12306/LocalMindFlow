@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态聊天工作台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f3ee;
+            --bg-2: #fcfbf8;
+            --panel: rgba(255, 255, 255, 0.78);
+            --panel-strong: rgba(255, 255, 255, 0.92);
+            --sidebar-bg: rgba(250, 247, 242, 0.92);
+            --text: #1f2328;
+            --muted: #6c7178;
+            --border: rgba(31, 35, 40, 0.10);
+            --border-strong: rgba(31, 35, 40, 0.14);
+            --accent: #9a6b3f;
+            --accent-2: #d18b49;
+            --accent-soft: rgba(154, 107, 63, 0.10);
+            --user-msg: #f6f1ea;
+            --assistant-msg: rgba(255, 255, 255, 0.96);
+            --system-msg: #fbf7f1;
+            --shadow: 0 24px 70px rgba(34, 28, 22, 0.10);
+            --shadow-soft: 0 10px 28px rgba(34, 28, 22, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+        }
+
+        body {
+            font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 10% 10%, rgba(209, 139, 73, 0.16), transparent 26%),
+                radial-gradient(circle at 90% 0%, rgba(154, 107, 63, 0.10), transparent 22%),
+                linear-gradient(180deg, var(--bg), var(--bg-2));
+            overflow: hidden;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(18px);
+            padding: 22px 18px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow-y: auto;
+            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(31, 35, 40, 0.08);
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 750;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-subtitle {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 5px;
+            line-height: 1.45;
+        }
+
+        .sidebar-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .tool-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .tool-card {
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.64);
+            padding: 14px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        details.tool-card {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        details.tool-card summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px;
+            user-select: none;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        details.tool-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.tool-card summary::after {
+            content: '▾';
+            color: var(--muted);
+            transition: transform 0.16s ease;
+        }
+
+        details.tool-card[open] summary::after {
+            transform: rotate(180deg);
+        }
+
+        .tool-body {
+            padding: 0 14px 14px;
+        }
+
+        .summary-chip {
+            font-size: 11px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-weight: 600;
+        }
+
+        .tool-card-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .skill-list,
+        .common-file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .skill-item,
+        .file-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            border: 1px solid rgba(31, 35, 40, 0.06);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.78);
+            padding: 8px 10px;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .skill-item:hover,
+        .file-item:hover {
+            transform: translateY(-1px);
+            border-color: rgba(154, 107, 63, 0.18);
+            box-shadow: 0 10px 20px rgba(34, 28, 22, 0.06);
+        }
+
+        .skill-item input {
+            margin-top: 2px;
+        }
+
+        .skill-meta,
+        .file-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .skill-name,
+        .file-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .skill-desc,
+        .file-desc {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .sidebar-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 0;
+        }
+
+        .sidebar-stack > .tool-card {
+            min-height: 0;
+        }
+
+        .tool-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tool-input {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 10px;
+            font: inherit;
+            background: #fff;
+        }
+
+        .tool-preview {
+            margin-top: 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #fff;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 240px;
+            overflow: auto;
+        }
+
+        .attached-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .attached-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            border: 1px solid rgba(217, 119, 6, 0.25);
+            color: var(--text);
+            font-size: 12px;
+        }
+
+        .btn,
+        .session-item,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        .btn {
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            border-radius: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            border-color: #d2c7bb;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #c86f05;
+            border-color: #c86f05;
+        }
+
+        .btn-ghost {
+            background: #fff;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 12px 4px 10px;
+        }
+
+        .session-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .session-item {
+            border: 1px solid transparent;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .session-item:hover {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: var(--border);
+        }
+
+        .session-item.active {
+            background: var(--accent-soft);
+            border-color: rgba(217, 119, 6, 0.25);
+        }
+
+        .session-topline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .session-preview {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            
+            -webkit-box-orient: vertical;
+        }
+
+        .session-meta {
+            font-size: 11px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .main {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            min-width: 0;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 18px 28px 12px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: linear-gradient(180deg, rgba(247, 243, 238, 0.92), rgba(247, 243, 238, 0.62));
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(31, 35, 40, 0.06);
+        }
+
+        .topbar-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .topbar-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 750;
+            letter-spacing: -0.02em;
+        }
+
+        .topbar-subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .topbar-chip {
+            font-size: 12px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            border-radius: 999px;
+            padding: 8px 12px;
+            box-shadow: 0 6px 18px rgba(34, 28, 22, 0.05);
+        }
+
+        .topbar-metrics {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .chat-wrap {
+            position: relative;
+            min-width: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            padding: 8px 20px 0;
+        }
+
+        .welcome {
+            position: absolute;
+            inset: 0 20px 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .welcome-card {
+            text-align: center;
+            max-width: 680px;
+            padding: 36px 28px 28px;
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.68);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .welcome-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            box-shadow: 0 10px 24px rgba(34, 28, 22, 0.05);
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+
+        .welcome-title {
+            margin: 0;
+            font-size: clamp(38px, 4vw, 58px);
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            line-height: 1.03;
+        }
+
+        .welcome-title strong {
+            color: var(--accent-2);
+            font-weight: 800;
+        }
+
+        .welcome-desc {
+            margin: 14px auto 0;
+            max-width: 540px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        #chatBox {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 18px 24px 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: min(920px, 100%);
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 920px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .message.user-message {
+            align-items: flex-end;
+        }
+
+        .message-role {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            padding: 0 6px;
+        }
+
+        .message-bubble {
+            border-radius: 24px;
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            padding: 15px 18px;
+            line-height: 1.75;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .user-message .message-bubble {
+            background: var(--user-msg);
+        }
+
+        .assistant-message .message-bubble {
+            background: var(--assistant-msg);
+        }
+
+        .system-message .message-bubble {
+            background: var(--system-msg);
+        }
+
+        .composer {
+            position: relative;
+            z-index: 2;
+            padding: 0 24px 24px;
+        }
+
+        .composer-card {
+            max-width: 920px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(31, 35, 40, 0.10);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            padding: 14px 14px 12px;
+        }
+
+        .composer-context {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 2px 2px 10px;
+            min-height: 0;
+        }
+
+        .composer-input {
+            width: 100%;
+            min-height: 74px;
+            max-height: 220px;
+            resize: none;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            line-height: 1.65;
+            color: var(--text);
+            padding: 6px 4px 10px;
+            background: transparent;
+        }
+
+        .composer-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(31, 35, 40, 0.08);
+        }
+
+        .composer-left,
+        .composer-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .message-bubble {
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 14px 16px;
+            line-height: 1.65;
+            word-break: break-word;
+            background: #fff;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+            white-space: normal;
+        }
+
+        .message-bubble p {
+            margin: 0 0 10px;
+        }
+
+        .message-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-bubble h1,
+        .message-bubble h2,
+        .message-bubble h3,
+        .message-bubble h4,
+        .message-bubble h5,
+        .message-bubble h6 {
+            margin: 0 0 12px;
+            line-height: 1.35;
+        }
+
+        .message-bubble ul,
+        .message-bubble ol {
+            margin: 0 0 10px 20px;
+            padding: 0;
+        }
+
+        .message-bubble li {
+            margin: 4px 0;
+        }
+
+        .message-bubble blockquote {
+            margin: 10px 0;
+            padding: 8px 12px;
+            border-left: 4px solid var(--accent);
+            background: rgba(217, 119, 6, 0.06);
+            color: var(--muted);
+        }
+
+        .message-bubble pre {
+            margin: 10px 0;
+            padding: 12px;
+            overflow-x: auto;
+            border-radius: 12px;
+            background: #f6f6f6;
+            border: 1px solid var(--border);
+        }
+
+        .message-bubble code {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.92em;
+        }
+
+        .message-bubble pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .message-bubble :not(pre) > code {
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: #f6f6f6;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            background: rgba(255, 255, 255, 0.82);
+            padding: 8px 12px;
+            font-size: 12px;
+            color: var(--muted);
+            box-shadow: 0 8px 16px rgba(34, 28, 22, 0.04);
+        }
+
+        select {
+            border: 1px solid rgba(31, 35, 40, 0.08);
+            border-radius: 999px;
+            padding: 9px 14px;
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--text);
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(34, 28, 22, 0.04);
+        }
+
+        #sendBtn {
+            min-width: 76px;
+            min-height: 48px;
+            border-radius: 16px;
+            padding-inline: 16px;
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 1100px) {
+            .app {
+                grid-template-columns: 280px minmax(0, 1fr);
+            }
+
+        }
+
+        @media (max-width: 760px) {
+            .app {
+                grid-template-columns: 1fr;
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                max-height: 46vh;
+            }
+
+            .main {
+                min-height: 100vh;
+            }
+
+            .welcome-title {
+                font-size: 34px;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .topbar-metrics {
+                justify-content: flex-start;
+            }
+
+            .composer-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <div>
+                    <div class="brand-name">多模态聊天工作台</div>
+                    <div class="brand-subtitle">真实会话 / 历史回放 / 模型切换</div>
+                </div>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="newSessionBtn" class="btn btn-primary" type="button">新建会话</button>
+                <button id="refreshSessionsBtn" class="btn btn-ghost" type="button">刷新历史</button>
+                <button id="deleteSessionBtn" class="btn btn-ghost" type="button">删除当前会话</button>
+            </div>
+
+            <div class="sidebar-section-title">最近会话</div>
+            <div id="sessionList" class="session-list"></div>
+
+            <div class="tool-stack">
+                <details class="tool-card">
+                    <summary>
+                        <span>技能</span>
+                        <span class="summary-chip" id="skillCountChip">0</span>
+                    </summary>
+                    <div class="tool-body">
+                        <div id="skillList" class="skill-list"></div>
+                        <div class="attached-list" id="selectedSkillList"></div>
+                    </div>
+                </details>
+
+                <details class="tool-card">
+                    <summary>
+                        <span>常用文件</span>
+                        <span class="summary-chip" id="commonFileCountChip">0</span>
+                    </summary>
+                    <div class="tool-body">
+                        <div class="tool-row" style="margin-bottom: 8px;">
+                            <button id="loadCommonFilesBtn" class="btn btn-ghost" type="button" style="flex: 1;">刷新常用文件</button>
+                        </div>
+                        <div id="commonFileList" class="common-file-list"></div>
+                    </div>
+                </details>
+
+                <details class="tool-card">
+                    <summary>
+                        <span>文件读取</span>
+                        <span class="summary-chip" id="attachedFileCountChip">0</span>
+                    </summary>
+                    <div class="tool-body">
+                        <input id="filePathInput" class="tool-input" placeholder="输入 workspace 内相对路径，例如 app/main.py" />
+                        <div class="tool-row" style="margin-top: 8px;">
+                            <input id="fileStartInput" class="tool-input" type="number" min="1" value="1" style="flex: 1;" />
+                            <input id="fileEndInput" class="tool-input" type="number" min="1" value="200" style="flex: 1;" />
+                        </div>
+                        <div class="tool-row" style="margin-top: 8px;">
+                            <button id="readFileBtn" class="btn btn-primary" type="button" style="flex: 1;">读取文件</button>
+                            <button id="attachFileBtn" class="btn btn-ghost" type="button" style="flex: 1;">附加到上下文</button>
+                        </div>
+                        <div id="attachedFilesList" class="attached-list"></div>
+                        <div id="filePreview" class="tool-preview">尚未读取文件</div>
+                    </div>
+                </details>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <div class="topbar-info">
+                    <h1 class="topbar-title">{{ title }}</h1>
+                    <p class="topbar-subtitle">{{ desc or "基于会话的聊天、历史和模型选择已真实接入" }}</p>
+                </div>
+                <div class="topbar-metrics">
+                    <div class="topbar-chip">当前会话：<span id="currentSessionLabel"></span></div>
+                    <div class="topbar-chip">会话：<span id="sessionCountLabel">0</span></div>
+                    <div class="topbar-chip">记忆：<span id="memoryCountLabel">0</span></div>
+                    <div class="topbar-chip">事件：<span id="eventCountLabel">0</span></div>
+                </div>
+            </div>
+
+            <div class="chat-wrap">
+                <div id="welcomeScreen" class="welcome">
+                    <div class="welcome-card">
+                        <div class="welcome-badge" id="availableModelsBadge">正在加载可用模型...</div>
+                        <h2 class="welcome-title">开始一个<strong>真实会话</strong></h2>
+                        <p class="welcome-desc">发送消息后会生成会话记录，左侧列表实时显示最近会话，点击任一条即可回放该会话历史。当前版本已经接入长期记忆、会话反思和后端模型目录。</p>
+                    </div>
+                </div>
+
+                <div id="chatBox"></div>
+            </div>
+
+            <div class="composer">
+                <div class="composer-card">
+                    <div id="composerContextSummary" class="composer-context">
+                        <span class="chip">尚未附加技能或文件</span>
+                    </div>
+                    <textarea id="messageInput" class="composer-input" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+                    <div class="composer-footer">
+                        <div class="composer-left">
+                            <span class="chip">当前模型</span>
+                            <select id="modelSelect" aria-label="模型选择"></select>
+                        </div>
+                        <div class="composer-right">
+                            <span class="chip" id="messageCountChip">0 条消息</span>
+                            <button id="sendBtn" class="btn btn-primary" type="button" disabled>发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const sendBtn = document.getElementById('sendBtn');
+        const newSessionBtn = document.getElementById('newSessionBtn');
+        const refreshSessionsBtn = document.getElementById('refreshSessionsBtn');
+        const deleteSessionBtn = document.getElementById('deleteSessionBtn');
+        const messageInput = document.getElementById('messageInput');
+        const modelSelect = document.getElementById('modelSelect');
+        const chatBox = document.getElementById('chatBox');
+        const sessionList = document.getElementById('sessionList');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const currentSessionLabel = document.getElementById('currentSessionLabel');
+        const sessionCountLabel = document.getElementById('sessionCountLabel');
+        const memoryCountLabel = document.getElementById('memoryCountLabel');
+        const eventCountLabel = document.getElementById('eventCountLabel');
+        const messageCountChip = document.getElementById('messageCountChip');
+        const composerContextSummary = document.getElementById('composerContextSummary');
+        const skillList = document.getElementById('skillList');
+        const selectedSkillList = document.getElementById('selectedSkillList');
+        const commonFileList = document.getElementById('commonFileList');
+        const attachedFilesList = document.getElementById('attachedFilesList');
+        const filePreview = document.getElementById('filePreview');
+        const skillCountChip = document.getElementById('skillCountChip');
+        const commonFileCountChip = document.getElementById('commonFileCountChip');
+        const attachedFileCountChip = document.getElementById('attachedFileCountChip');
+        const filePathInput = document.getElementById('filePathInput');
+        const fileStartInput = document.getElementById('fileStartInput');
+        const fileEndInput = document.getElementById('fileEndInput');
+        const loadCommonFilesBtn = document.getElementById('loadCommonFilesBtn');
+        const readFileBtn = document.getElementById('readFileBtn');
+        const attachFileBtn = document.getElementById('attachFileBtn');
+
+        const availableModelsBadge = document.getElementById('availableModelsBadge');
+        const defaultFallbackModels = ['deepseek-r1:1.5b', 'gemma3:1b', 'qwen3:1.7b'];
+        let currentSessionId = crypto.randomUUID();
+        let messages = [];
+        let skillsCache = [];
+        let selectedSkillNames = new Set();
+        let attachedFilePaths = new Set();
+        let filePreviewState = '';
+
+        function updateSessionLabel() {
+            currentSessionLabel.textContent = currentSessionId.slice(0, 8);
+        }
+
+        function updateMessageCount() {
+            messageCountChip.textContent = `${messages.length} 条消息`;
+        }
+
+        function renderMarkdown(content) {
+            const rawHtml = marked.parse(content || "");
+            return DOMPurify.sanitize(rawHtml);
+        }
+
+        function populateModelSelect(modelList) {
+            const models = modelList.length ? modelList : defaultFallbackModels.map((name) => ({ name, label: name }));
+            const currentValue = modelSelect.value;
+
+            modelSelect.innerHTML = '';
+            models.forEach((item) => {
+                const value = item.name || item;
+                const label = item.label || item.name || item;
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                modelSelect.appendChild(option);
+            });
+
+            if (currentValue && models.some((item) => (item.name || item) === currentValue)) {
+                modelSelect.value = currentValue;
+            } else if (models.length) {
+                modelSelect.value = models[0].name || models[0];
+            }
+
+            const labels = models.map((item) => item.label || item.name || item).join(' / ');
+            availableModelsBadge.textContent = labels ? `可用模型：${labels}` : '可用模型：暂无';
+        }
+
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/chat/models');
+                if (!response.ok) {
+                    populateModelSelect([]);
+                    return;
+                }
+
+                const models = await response.json();
+                populateModelSelect(models);
+            } catch (error) {
+                console.error('Load models error', error);
+                populateModelSelect([]);
+            }
+        }
+
+        async function loadOverview() {
+            try {
+                const response = await fetch('/api/chat/overview');
+                if (!response.ok) return;
+                const overview = await response.json();
+                sessionCountLabel.textContent = overview.sessions ?? 0;
+                memoryCountLabel.textContent = overview.memories ?? 0;
+                eventCountLabel.textContent = overview.events ?? 0;
+            } catch (error) {
+                console.error('Load overview error', error);
+            }
+        }
+
+        function renderSelectedSkills() {
+            const selected = skillsCache.filter((item) => selectedSkillNames.has(item.name));
+            skillCountChip.textContent = `${selected.length}`;
+            selectedSkillList.innerHTML = selected.length
+                ? selected.map((item) => `<span class="attached-chip">${item.name}</span>`).join('')
+                : '<span class="chip">未选择技能</span>';
+
+            renderComposerSummary();
+        }
+
+        function renderAttachedFiles() {
+            const files = [...attachedFilePaths];
+            attachedFileCountChip.textContent = `${files.length}`;
+            attachedFilesList.innerHTML = files.length
+                ? files.map((path) => `<span class="attached-chip">${path}</span>`).join('')
+                : '<span class="chip">未附加文件</span>';
+
+            renderComposerSummary();
+        }
+
+        function renderComposerSummary() {
+            const selectedSkills = [...selectedSkillNames];
+            const files = [...attachedFilePaths];
+            const parts = [];
+
+            if (selectedSkills.length) {
+                parts.push(...selectedSkills.map((name) => `<span class="chip">技能: ${name}</span>`));
+            }
+
+            if (files.length) {
+                parts.push(...files.map((path) => `<span class="chip">文件: ${path}</span>`));
+            }
+
+            composerContextSummary.innerHTML = parts.length ? parts.join('') : '<span class="chip">尚未附加技能或文件</span>';
+        }
+
+        function renderSkillList(skills) {
+            skillsCache = skills || [];
+            const normalizedSelection = new Set([...selectedSkillNames].filter((name) => skillsCache.some((item) => item.name === name)));
+            selectedSkillNames = normalizedSelection;
+
+            skillList.innerHTML = skillsCache.length
+                ? skillsCache.map((item) => `
+                    <label class="skill-item">
+                        <input type="checkbox" data-skill-name="${item.name}" ${selectedSkillNames.has(item.name) ? 'checked' : ''} />
+                        <span class="skill-meta">
+                            <span class="skill-name">${item.name}</span>
+                            <span class="skill-desc">${item.description || '无描述'}</span>
+                        </span>
+                    </label>
+                `).join('')
+                : '<div class="skill-desc">暂无可用技能</div>';
+
+            skillList.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+                checkbox.addEventListener('change', (event) => {
+                    const skillName = event.target.getAttribute('data-skill-name');
+                    if (!skillName) return;
+                    if (event.target.checked) {
+                        selectedSkillNames.add(skillName);
+                    } else {
+                        selectedSkillNames.delete(skillName);
+                    }
+                    renderSelectedSkills();
+                });
+            });
+
+            renderSelectedSkills();
+        }
+
+        async function loadSkills() {
+            try {
+                const response = await fetch('/api/tools/skills');
+                if (!response.ok) {
+                    renderSkillList([]);
+                    return;
+                }
+
+                const skills = await response.json();
+                renderSkillList(skills);
+            } catch (error) {
+                console.error('Load skills error', error);
+                renderSkillList([]);
+            }
+        }
+
+        function renderCommonFiles(files) {
+            commonFileCountChip.textContent = `${files.length}`;
+            commonFileList.innerHTML = files.length
+                ? files.map((item) => `
+                    <button type="button" class="file-item" data-file-path="${item.path}">
+                        <span class="file-meta">
+                            <span class="file-name">${item.path}</span>
+                            <span class="file-desc">${item.size_bytes || 0} bytes</span>
+                        </span>
+                    </button>
+                `).join('')
+                : '<div class="file-desc">暂无常用文件</div>';
+
+            commonFileList.querySelectorAll('.file-item').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const path = button.getAttribute('data-file-path');
+                    if (!path) return;
+                    filePathInput.value = path;
+                });
+            });
+        }
+
+        async function loadCommonFiles() {
+            try {
+                const response = await fetch('/api/tools/common-files');
+                if (!response.ok) {
+                    renderCommonFiles([]);
+                    return;
+                }
+
+                const files = await response.json();
+                renderCommonFiles(files);
+            } catch (error) {
+                console.error('Load common files error', error);
+                renderCommonFiles([]);
+            }
+        }
+
+        async function previewFile() {
+            const path = filePathInput.value.trim();
+            if (!path) {
+                filePreview.textContent = '请输入文件路径';
+                return null;
+            }
+
+            const startLine = Number.parseInt(fileStartInput.value || '1', 10) || 1;
+            const endLine = Number.parseInt(fileEndInput.value || '200', 10) || 200;
+
+            try {
+                const response = await fetch(`/api/tools/file?path=${encodeURIComponent(path)}&start_line=${startLine}&end_line=${endLine}`);
+                if (!response.ok) {
+                    filePreview.textContent = `读取失败：${response.status}`;
+                    return null;
+                }
+
+                const payload = await response.json();
+                filePreviewState = payload.content || '';
+                filePreview.textContent = `${payload.path} [${payload.start_line}-${payload.end_line}/${payload.total_lines}]\n\n${payload.content || ''}`;
+                return payload;
+            } catch (error) {
+                console.error('Preview file error', error);
+                filePreview.textContent = '读取文件时出错';
+                return null;
+            }
+        }
+
+        async function attachCurrentFile() {
+            const payload = await previewFile();
+            if (!payload) return;
+            attachedFilePaths.add(payload.path);
+            renderAttachedFiles();
+        }
+
+
+        function setWelcomeVisible(visible) {
+            welcomeScreen.style.display = visible ? 'flex' : 'none';
+        }
+
+        function setSendEnabled() {
+            sendBtn.disabled = !messageInput.value.trim();
+        }
+
+        function getNow() {
+            return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit',hour12: false });
+        }
+
+        function formatMessageTime(timestamp) {
+            if (!timestamp) {
+                return getNow();
+            }
+
+            const date = new Date(timestamp);
+            if (Number.isNaN(date.getTime())) {
+                return getNow();
+            }
+
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function createMessage(role, content, className, timestamp = '', modelName = '') {
+            setWelcomeVisible(false);
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+
+            const roleDiv = document.createElement('div');
+            roleDiv.className = 'message-role';
+            const labelMap = { user: '你', assistant: '模型', system: '系统' };
+            const label = role === 'assistant' && modelName ? `${labelMap[role]} · ${modelName}` : (labelMap[role] || role);
+            roleDiv.textContent = `${label} · ${formatMessageTime(timestamp)}`;
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            if (role === 'assistant') {
+                bubbleDiv.innerHTML = renderMarkdown(content);
+            } else {
+                bubbleDiv.textContent = content;
+            }
+            messageDiv.appendChild(roleDiv);
+            messageDiv.appendChild(bubbleDiv);
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return messageDiv;
+        }
+
+        function renderChatFromHistory(records) {
+            chatBox.innerHTML = '';
+            messages = [];
+
+            if (!records.length) {
+                setWelcomeVisible(true);
+                updateMessageCount();
+                return;
+            }
+
+            setWelcomeVisible(false);
+            for (const record of records) {
+                const className = record.role === 'user' ? 'user-message' : record.role === 'assistant' ? 'assistant-message' : 'system-message';
+                createMessage(record.role, record.content, className, record.created_at, record.model || '');
+                if (['user', 'assistant', 'system'].includes(record.role)) {
+                    messages.push({ role: record.role, content: record.content });
+                }
+            }
+            updateMessageCount();
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch(`/api/chat/history?session_id=${currentSessionId}`);
+                if (!response.ok) return;
+                const records = await response.json();
+                renderChatFromHistory(records);
+            } catch (error) {
+                console.error('Load history error', error);
+            }
+        }
+
+        async function refreshSessionList() {
+            try {
+                const response = await fetch('/api/chat/sessions');
+                if (!response.ok) return;
+                const sessions = await response.json();
+
+                if (!sessions.length) {
+                    sessionList.innerHTML = '<div class="session-preview">暂无历史会话，发送消息后这里会显示记录。</div>';
+                    return;
+                }
+
+                sessionList.innerHTML = sessions.map((item) => {
+                    const active = item.session_id === currentSessionId ? 'active' : '';
+                    return `
+                        <button type="button" class="session-item ${active}" data-session-id="${item.session_id}">
+                            <div class="session-topline">
+                                <span>${item.model || '未知模型'}</span>
+                                <span class="session-meta">${item.message_count} 条</span>
+                            </div>
+                            <div class="session-preview">${item.preview || '空会话'}</div>
+                        </button>
+                    `;
+                }).join('');
+
+                sessionList.querySelectorAll('.session-item').forEach((item) => {
+                    item.addEventListener('click', async () => {
+                        const sessionId = item.getAttribute('data-session-id');
+                        if (!sessionId || sessionId === currentSessionId) return;
+                        currentSessionId = sessionId;
+                        updateSessionLabel();
+                        await loadHistory();
+                        await refreshSessionList();
+                    });
+                });
+            } catch (error) {
+                console.error('Refresh session list error', error);
+            }
+        }
+
+        async function deleteCurrentSession() {
+            try {
+                const response = await fetch(`/api/chat/session?session_id=${currentSessionId}`, { method: 'DELETE' });
+                if (!response.ok) return;
+
+                currentSessionId = crypto.randomUUID();
+                messages = [];
+                chatBox.innerHTML = '';
+                setWelcomeVisible(true);
+                updateSessionLabel();
+                updateMessageCount();
+                await refreshSessionList();
+            } catch (error) {
+                console.error('Delete session error', error);
+            }
+        }
+
+        async function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content) return;
+
+            const model = modelSelect.value || defaultFallbackModels[0];
+            const historySnapshot = [...messages];
+            const skillNames = [...selectedSkillNames];
+            const contextFiles = [...attachedFilePaths];
+
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            setSendEnabled();
+
+            createMessage('user', content, 'user-message', new Date().toISOString());
+
+            const pending = createMessage('assistant', '正在思考...', 'assistant-message', new Date().toISOString(), model);
+            const pendingBubble = pending.querySelector('.message-bubble');
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                        message: content,
+                        model,
+                        messages: historySnapshot,
+                        skill_names: skillNames,
+                        context_files: contextFiles
+                    })
+                });
+
+                if (!response.ok) {
+                    pendingBubble.textContent = `请求失败：${response.status}`;
+                    return;
+                }
+
+                if (!response.body) {
+                    pendingBubble.textContent = '浏览器不支持流式响应';
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+
+                let fullAnswer = '';
+                pendingBubble.innerHTML = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullAnswer += chunk;
+
+                    pendingBubble.innerHTML = renderMarkdown(fullAnswer);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                messages.push({ role: 'user', content });
+                messages.push({ role: 'assistant', content: fullAnswer });
+                updateMessageCount();
+                await refreshSessionList();
+                await loadOverview();
+            } catch (error) {
+                pendingBubble.textContent = '请求出错，请检查后端';
+                console.error('Send message error', error);
+            } finally {
+                setSendEnabled();
+            }
+        }
+
+        newSessionBtn.addEventListener('click', async () => {
+            currentSessionId = crypto.randomUUID();
+            messages = [];
+            chatBox.innerHTML = '';
+            setWelcomeVisible(true);
+            updateSessionLabel();
+            updateMessageCount();
+            await refreshSessionList();
+        });
+
+        refreshSessionsBtn.addEventListener('click', refreshSessionList);
+        deleteSessionBtn.addEventListener('click', deleteCurrentSession);
+        sendBtn.addEventListener('click', sendMessage);
+        loadCommonFilesBtn.addEventListener('click', loadCommonFiles);
+        readFileBtn.addEventListener('click', previewFile);
+        attachFileBtn.addEventListener('click', attachCurrentFile);
+
+        messageInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+            setSendEnabled();
+        });
+
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        updateSessionLabel();
+        updateMessageCount();
+        setWelcomeVisible(true);
+        setSendEnabled();
+        loadModels();
+        loadSkills();
+        loadOverview();
+        loadCommonFiles();
+        loadHistory();
+        refreshSessionList();
+        renderAttachedFiles();
+        renderComposerSummary();
+    </script>
+</body>
+</html>
