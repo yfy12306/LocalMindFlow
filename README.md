@@ -26,11 +26,11 @@
 
 ### 主对话工作台
 
-![主对话工作台](docs/images/dashboard-chat.png)
+![主对话工作台](multimodal_site/docs/images/dashboard-chat.png)
 
 ### 总览与会话控制区
 
-![总览与会话控制区](docs/images/dashboard-overview.png)
+![总览与会话控制区](multimodal_site/docs/images/dashboard-overview.png)
 
 ## 技术栈
 
